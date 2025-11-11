@@ -86,14 +86,14 @@ async function checkDatabaseHealth(): Promise<{ healthy: boolean; reason?: strin
 			return { healthy: false, reason: 'Database adapter not initialized' };
 		}
 
-		// Check if database has roles (indicates setup was completed)
-		if (!dbAdapter.roles) {
-			return { healthy: false, reason: 'Database roles interface not available' };
+		// Check if database has users (indicates setup was completed)
+		if (!dbAdapter.auth) {
+			return { healthy: false, reason: 'Database auth interface not available' };
 		}
 
-		const rolesResult = await dbAdapter.roles.getAll();
-		if (!rolesResult.success || !rolesResult.data || rolesResult.data.length === 0) {
-			return { healthy: false, reason: 'Database is empty - no roles found. Setup may not have completed successfully.' };
+		const usersResult = await dbAdapter.auth.getUserCount();
+		if (!usersResult.success || !usersResult.data || usersResult.data === 0) {
+			return { healthy: false, reason: 'Database is empty - no users found. Setup may not have completed successfully.' };
 		}
 
 		return { healthy: true };
@@ -225,24 +225,30 @@ export const load: PageServerLoad = async ({ url, cookies, fetch, request, local
 		// Ensure initialization is complete
 		await dbInitPromise;
 
-		// First check database health before waiting for auth
-		const dbHealth = await checkDatabaseHealth();
-		if (!dbHealth.healthy) {
-			logger.error(`Database health check failed: ${dbHealth.reason}`);
-			return {
-				firstUserExists: true,
-				showOAuth: false,
-				hasExistingOAuthUsers: false,
-				loginForm: await superValidate(wrappedLoginSchema),
-				forgotForm: await superValidate(wrappedForgotSchema),
-				resetForm: await superValidate(wrappedResetSchema),
-				signUpForm: await superValidate(wrappedSignUpSchema),
-				showDatabaseError: true,
-				errorReason: dbHealth.reason,
-				canReset: true,
-				authNotReady: true,
-				authNotReadyMessage: dbHealth.reason
-			};
+		// Only check database health if setup is complete (config exists)
+		const { isSetupComplete } = await import('@utils/setupCheck');
+		const setupComplete = isSetupComplete();
+		
+		if (setupComplete) {
+			// Check database health before waiting for auth
+			const dbHealth = await checkDatabaseHealth();
+			if (!dbHealth.healthy) {
+				logger.error(`Database health check failed: ${dbHealth.reason}`);
+				return {
+					firstUserExists: true,
+					showOAuth: false,
+					hasExistingOAuthUsers: false,
+					loginForm: await superValidate(wrappedLoginSchema),
+					forgotForm: await superValidate(wrappedForgotSchema),
+					resetForm: await superValidate(wrappedResetSchema),
+					signUpForm: await superValidate(wrappedSignUpSchema),
+					showDatabaseError: true,
+					errorReason: dbHealth.reason,
+					canReset: true,
+					authNotReady: true,
+					authNotReadyMessage: dbHealth.reason
+				};
+			}
 		}
 
 		// Wait for auth service to be ready (reduced timeout from 30s to 10s)
