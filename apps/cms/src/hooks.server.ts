@@ -27,7 +27,7 @@
 import { building } from '$app/environment';
 import { type Handle } from '@sveltejs/kit';
 import { sequence } from '@sveltejs/kit/hooks';
-import { logger } from '@utils/logger.svelte';
+import { logger } from '@utils/logger.server';
 import { metricsService } from '@src/services/MetricsService';
 
 // --- Import enterprise middleware hooks ---
