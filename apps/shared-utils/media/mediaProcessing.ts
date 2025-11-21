@@ -95,3 +95,28 @@ export function getSanitizedFileName(fileName: string): {
 	});
 	return sanitized;
 }
+
+/**
+ * Extracts metadata from an image buffer using Sharp
+ * @param buffer - The image buffer to extract metadata from
+ * @returns Sharp metadata object containing image information
+ */
+export async function extractMetadata(buffer: Buffer): Promise<any> {
+	if (!import.meta.env.SSR) {
+		const message = 'extractMetadata can only be performed on the server';
+		logger.error(message);
+		throw error(500, message);
+	}
+
+	try {
+		// Dynamic import of Sharp (server-side only)
+		const Sharp = (await import('sharp')).default;
+		const sharpInstance = Sharp(buffer);
+		const metadata = await sharpInstance.metadata();
+		return metadata;
+	} catch (err) {
+		const message = `Error extracting metadata: ${err instanceof Error ? err.message : String(err)}`;
+		logger.error(message);
+		throw error(500, message);
+	}
+}
