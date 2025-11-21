@@ -124,6 +124,13 @@ export const collectionValue = {
 		}
 	}
 };
+// Callback for UI layout updates (set by UIStore to avoid circular dependency)
+let uiLayoutUpdateCallback: (() => void) | null = null;
+
+export function setUILayoutUpdateCallback(callback: () => void) {
+	uiLayoutUpdateCallback = callback;
+}
+
 export const mode = {
 	get value() {
 		return _mode;
@@ -131,17 +138,14 @@ export const mode = {
 	set value(v) {
 		logger.debug(`mode.value setter: ${_mode} -> ${v}`);
 		_mode = v;
-		// Trigger UI layout update when mode changes
-		// Use dynamic import to avoid circular dependency
-		if (typeof window !== 'undefined') {
-			import('./UIStore.svelte')
-				.then(({ uiStateManager }) => {
-					logger.debug(`Triggering uiStateManager.updateLayout() for mode: ${v}`);
-					requestAnimationFrame(() => uiStateManager.updateLayout());
-				})
-				.catch(() => {
-					// Ignore errors if UIStore is not available
-				});
+		// Store mode globally for UIStore to access without circular dependency
+		if (typeof globalThis !== 'undefined') {
+			(globalThis as any).__collectionStore_mode = v;
+		}
+		// Trigger UI layout update when mode changes via callback
+		if (typeof window !== 'undefined' && uiLayoutUpdateCallback) {
+			logger.debug(`Triggering UI layout update for mode: ${v}`);
+			requestAnimationFrame(() => uiLayoutUpdateCallback?.());
 		}
 	}
 };

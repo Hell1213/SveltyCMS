@@ -57,7 +57,7 @@ export const POST: RequestHandler = async ({ locals, request }) => {
 
 		// If deactivating, check if the widget is in use by collections
 		if (!isActive) {
-			const contentManager = await import('@root/src/content/ContentManager').then((m) => m.contentManager);
+			const contentManager = await import('@src/content/ContentManager').then((m) => m.contentManager);
 
 			// Check if widget is used in any collection
 			const allCollections = contentManager.getCollections();

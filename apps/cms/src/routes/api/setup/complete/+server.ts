@@ -37,7 +37,7 @@ interface AdminConfig {
 	confirmPassword: string;
 }
 
-import { getCachedFirstCollectionPath } from '@utils/server/collection-utils.server';
+import { getCachedFirstCollectionPath } from '@utils/collection-utils.server.js';
 
 export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	const correlationId = randomBytes(6).toString('hex');
@@ -354,13 +354,46 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			);
 		}
 
-		// 5. Now safe to invalidate caches (after system is initialized)
+		// 5. Seed roles into database (if not already present)
+		try {
+			const { auth: globalAuth, dbAdapter } = await import('@src/databases/db');
+			if (globalAuth && dbAdapter) {
+				const existingRoles = await globalAuth.getAllRoles();
+				if (!existingRoles || existingRoles.length === 0) {
+					logger.info('Seeding roles into database...', { correlationId });
+					const { initializeRoles, roles: configRoles } = await import('@root/config/roles');
+					await initializeRoles();
+					
+					for (const role of configRoles) {
+						try {
+							await dbAdapter.auth.createRole(role);
+							logger.debug(`Role created: ${role.name}`, { correlationId, roleId: role._id });
+						} catch (roleError) {
+							logger.warn(`Failed to create role ${role.name}:`, {
+								correlationId,
+								error: roleError instanceof Error ? roleError.message : String(roleError)
+							});
+						}
+					}
+					logger.info(`✅ Seeded ${configRoles.length} roles into database`, { correlationId });
+				} else {
+					logger.info(`Roles already exist in database (${existingRoles.length} roles)`, { correlationId });
+				}
+			}
+		} catch (roleError) {
+			logger.warn('Failed to seed roles (non-fatal):', {
+				correlationId,
+				error: roleError instanceof Error ? roleError.message : String(roleError)
+			});
+		}
+
+		// 6. Now safe to invalidate caches (after system is initialized)
 		invalidateSettingsCache();
 		const { invalidateSetupCache } = await import('@utils/setupCheck');
 		invalidateSetupCache();
 		logger.info('Caches invalidated', { correlationId });
 
-		// 5.1 Warm up session cache in the global auth instance
+		// 7. Warm up session cache in the global auth instance
 		// This ensures the newly created session is recognized immediately after setup
 		try {
 			const { auth: globalAuth } = await import('@src/databases/db');
@@ -395,7 +428,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			});
 		}
 
-		// 6. Send welcome email to the new admin user (optional - graceful failure)
+		// 8. Send welcome email to the new admin user (optional - graceful failure)
 		// Only send if SMTP was configured during setup
 		if (!skipWelcomeEmail) {
 			try {
@@ -440,7 +473,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			logger.info('Skipping welcome email (SMTP not configured during setup)', { correlationId });
 		}
 
-		// 7. Determine redirect path
+		// 9. Determine redirect path
 		let redirectPath: string;
 		try {
 			const langFromStore = get(systemLanguage);
@@ -481,7 +514,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			redirectPath = '/config/collectionbuilder';
 		}
 
-		// 8. Create session cookie (session already created in step 3)
+		// 10. Create session cookie (session already created in step 3)
 		let sessionCookie;
 		try {
 			if (!setupAuth) {
@@ -510,7 +543,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			);
 		}
 
-		// 9. Set session cookie
+		// 11. Set session cookie
 		const cookieAttrs = sessionCookie.attributes as { maxAge?: number } | undefined;
 		cookies.set(sessionCookie.name, sessionCookie.value, {
 			path: '/',
@@ -520,7 +553,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			sameSite: 'lax'
 		});
 
-		// 10. Set theme cookies
+		// 12. Set theme cookies
 		const theme = cookies.get('theme');
 		const darkMode = cookies.get('darkMode');
 		if (theme) {
@@ -538,7 +571,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 			});
 		}
 
-		// 11. Return success - NO RESTART REQUIRED! ✨
+		// 13. Return success - NO RESTART REQUIRED! ✨
 		return json({
 			success: true,
 			message: 'Setup complete! Welcome to SveltyCMS! 🎉',

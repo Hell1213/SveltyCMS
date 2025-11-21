@@ -132,12 +132,12 @@ class ConfigService {
 
 		// 2. Scan Roles
 		try {
-			const rolesConfig = await import('../../../config/roles.ts');
-			const roles = rolesConfig.default;
+			const { roles, initializeRoles } = await import('@config/roles');
+			await initializeRoles(); // Initialize roles if not already done
 			for (const role of roles) {
 				const hash = createChecksum(role);
 				// Assuming roles have a unique name that can be used as a stand-in for UUID if none exists
-				const id = role.uuid || role.name;
+				const id = role._id || role.name;
 				state.set(id, { uuid: id, type: 'role', name: role.name, hash, entity: role });
 			}
 		} catch (err) {

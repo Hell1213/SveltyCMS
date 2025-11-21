@@ -10,7 +10,6 @@
  */
 
 // Stores
-import { mode } from './collectionStore.svelte';
 import { screenSize, ScreenSize } from './screenSizeStore.svelte';
 
 // System Logger
@@ -74,9 +73,9 @@ const createUIStores = () => {
 	};
 
 	// Base state with Svelte 5 runes
-	const initialMode = mode.value;
-	const initialIsViewMode = initialMode === 'view' || initialMode === 'media';
-	logger.debug('UIStore: Initializing with mode', { initialMode, initialIsViewMode, initialSize });
+	// Start with view mode as default, will be updated by mode changes
+	const initialIsViewMode = true;
+	logger.debug('UIStore: Initializing', { initialIsViewMode, initialSize });
 
 	let uiState = $state<UIState>(getDefaultState(initialSize, initialIsViewMode));
 	let userPreferred = $state<UIVisibility>('collapsed');
@@ -99,13 +98,21 @@ const createUIStores = () => {
 
 		try {
 			const currentSize = screenSize.value;
-			// Read mode.value to get the actual mode string
-			const isViewMode = mode.value === 'view' || mode.value === 'media';
+			// Get mode from collectionStore via dynamic import (already loaded by now)
+			let isViewMode = true; // Default to view mode
+			try {
+				// Access mode synchronously if already loaded
+				const collectionStore = (globalThis as any).__collectionStore_mode;
+				if (collectionStore) {
+					isViewMode = collectionStore === 'view' || collectionStore === 'media';
+				}
+			} catch {
+				// Fallback to view mode
+			}
 			const newState = getDefaultState(currentSize, isViewMode);
 
 			logger.debug('UIStore: updateLayout called', {
 				currentSize,
-				modeValue: mode.value,
 				isViewMode,
 				manualOverrideActive: Date.now() < manualOverrideUntil
 			});
@@ -315,6 +322,10 @@ export const handleUILayoutToggle = uiStateManager.updateLayout;
 // Auto-initialize (client-side only)
 if (typeof window !== 'undefined') {
 	uiStateManager.initialize();
+	// Register callback with collectionStore to avoid circular dependency
+	import('./collectionStore.svelte').then(({ setUILayoutUpdateCallback }) => {
+		setUILayoutUpdateCallback(() => uiStateManager.updateLayout());
+	});
 }
 
 // This state will be controlled by widgets to show/hide special header buttons.

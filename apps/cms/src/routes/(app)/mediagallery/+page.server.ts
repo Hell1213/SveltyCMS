@@ -19,8 +19,8 @@ import { error, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 // Utils
-import type { SystemVirtualFolder } from '@root/src/databases/dbInterface';
-import type { MediaAccess } from '@root/src/utils/media/mediaModels';
+import type { SystemVirtualFolder } from '@src/databases/dbInterface';
+import type { MediaAccess } from '@utils/media/mediaModels';
 import { MediaService } from '@src/services/MediaService';
 import { constructUrl } from '@utils/media/mediaUtils';
 import mime from 'mime-types';

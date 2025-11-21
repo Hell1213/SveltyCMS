@@ -15,7 +15,7 @@ import { DEFAULT_THEME } from '@src/databases/themeManager';
 
 // System Logger
 import { contentManager } from '@src/content/ContentManager';
-import { logger } from '@utils/logger.svelte';
+import { logger } from '@utils/logger.server';
 
 // Server-side load function for the layout
 export const load: PageServerLoad = async ({ locals, params, url }) => {
