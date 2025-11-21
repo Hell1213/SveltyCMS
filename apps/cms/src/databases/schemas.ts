@@ -19,7 +19,7 @@
  */
 
 import type { BaseIssue, BaseSchema, InferOutput } from 'valibot';
-import type { DatabaseId, ISODateString } from './dbInterface';
+import type { DatabaseId, ISODateString } from '@sveltycms/shared-config/types';
 import { array, boolean, literal, maxValue, minLength, minValue, number, object, optional, pipe, safeParse, string, transform, union } from 'valibot';
 import { logger } from '@utils/logger';
 
