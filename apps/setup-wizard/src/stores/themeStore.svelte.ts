@@ -1,5 +1,5 @@
 /**
- * @file src/stores/themeStore.svelte.ts
+ * @file apps/setup-wizard/src/stores/themeStore.svelte.ts
  * @description Centralized, rune-based theme management store.
  * Now uses 'theme' cookie with 'dark' | 'light' values.
  */

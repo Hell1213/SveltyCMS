@@ -1,10 +1,24 @@
 /**
  * @file scripts/dev.ts
  * @description Smart development launcher with detailed validation
+ * 
+ * Features:
+ * - Checks for configuration file
+ * - Validates configuration
+ * - Launches appropriate app based on validation
+ * - Handles errors and provides helpful messages
+ * 
+ * Usage:
+ * - bun dev
+ * - bun dev --setup
+ * - bun dev --cms
  */
 
 import { validateSetupConfiguration, type SetupValidation } from '../apps/shared-utils/setupValidation.js';
 import { spawn } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 const args = process.argv.slice(2);
 const forceSetup = args.includes('--setup');
@@ -42,6 +56,51 @@ function printCmsStarting() {
 	);
 }
 
+// --- Helper: Ensure bunx is available ---
+function getEnvWithBunx(): NodeJS.ProcessEnv {
+	const env = { ...process.env };
+	
+	// Suppress deprecation warnings and fix NX terminal panic
+	env.NODE_OPTIONS = `${env.NODE_OPTIONS || ''} --no-deprecation`.trim();
+	env.NX_TERMINAL_OUTPUT_FORMAT = 'text';
+	env.NX_NATIVE_LOGGING = 'false';
+
+	// Check if bunx is already in PATH
+	const pathDirs = (env.PATH || '').split(path.delimiter);
+	const bunxExists = pathDirs.some(dir => {
+		try {
+			return fs.existsSync(path.join(dir, 'bunx'));
+		} catch {
+			return false;
+		}
+	});
+
+	if (bunxExists) return env;
+
+	try {
+		// Create a temporary directory for the shim
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sveltycms-bunx-'));
+		const bunPath = process.execPath; // Current bun executable
+		
+		// Create symlink: bunx -> bun
+		fs.symlinkSync(bunPath, path.join(tmpDir, 'bunx'));
+		
+		// Prepend to PATH
+		env.PATH = `${tmpDir}${path.delimiter}${env.PATH}`;
+		
+		// Attempt to cleanup on exit (best effort)
+		process.on('exit', () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch {}
+		});
+	} catch (err) {
+		console.warn('⚠️  Failed to create bunx shim:', err);
+	}
+
+	return env;
+}
+
 // --- App Launcher ---
 function launchApp(app: 'setup-wizard' | 'cms', production = false): Promise<void> {
 	return new Promise((resolve, reject) => {
@@ -51,13 +110,10 @@ function launchApp(app: 'setup-wizard' | 'cms', production = false): Promise<voi
 		console.log(`\n🚀 Launching: ${app}`);
 		console.log(`📦 Command: nx ${args.join(' ')}\n`);
 
-		const child = spawn('bunx', ['nx', ...args], {
+		const child = spawn('bun', ['x', 'nx', ...args], {
 			stdio: 'inherit',
-			shell: true,
-			env: {
-				...process.env,
-				FORCE_COLOR: '1'
-			}
+			shell: false, // Disable shell to prevent TTY issues
+			env: getEnvWithBunx()
 		});
 
 		child.on('error', (error) => {

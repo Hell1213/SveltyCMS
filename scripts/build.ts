@@ -4,6 +4,9 @@
  */
 
 import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
 
 const args = process.argv.slice(2);
 const buildAll = args.includes('--all');
@@ -23,16 +26,60 @@ function printBanner(text: string) {
 	);
 }
 
+// --- Helper: Ensure bunx is available ---
+function getEnvWithBunx(): NodeJS.ProcessEnv {
+	const env = { ...process.env };
+	
+	// Suppress deprecation warnings and fix NX terminal panic
+	env.NODE_OPTIONS = `${env.NODE_OPTIONS || ''} --no-deprecation`.trim();
+	env.NX_TERMINAL_OUTPUT_FORMAT = 'text';
+	env.NX_NATIVE_LOGGING = 'false';
+
+	// Check if bunx is already in PATH
+	const pathDirs = (env.PATH || '').split(path.delimiter);
+	const bunxExists = pathDirs.some(dir => {
+		try {
+			return fs.existsSync(path.join(dir, 'bunx'));
+		} catch {
+			return false;
+		}
+	});
+
+	if (bunxExists) return env;
+
+	try {
+		// Create a temporary directory for the shim
+		const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sveltycms-bunx-'));
+		const bunPath = process.execPath; // Current bun executable
+		
+		// Create symlink: bunx -> bun
+		fs.symlinkSync(bunPath, path.join(tmpDir, 'bunx'));
+		
+		// Prepend to PATH
+		env.PATH = `${tmpDir}${path.delimiter}${env.PATH}`;
+		
+		// Attempt to cleanup on exit (best effort)
+		process.on('exit', () => {
+			try {
+				fs.rmSync(tmpDir, { recursive: true, force: true });
+			} catch {}
+		});
+	} catch (err) {
+		console.warn('⚠️  Failed to create bunx shim:', err);
+	}
+
+	return env;
+}
+
 function runBuild(target: string): Promise<void> {
 	return new Promise((resolve, reject) => {
 		console.log(`\n📦 Building: ${target}\n`);
 
-		const child = spawn('bunx', ['nx', 'build', target], {
+		const child = spawn('bun', ['x', 'nx', 'build', target], {
 			stdio: 'inherit',
-			shell: true,
+			shell: false,
 			env: {
-				...process.env,
-				NODE_OPTIONS: '--no-warnings --no-deprecation',
+				...getEnvWithBunx(),
 				FORCE_COLOR: '1'
 			}
 		});

@@ -1,5 +1,5 @@
 /**
- * @file setupStore.svelte.ts
+ * @file apps/setup-wizard/src/stores/setupStore.svelte.ts
  * @description Svelte 5 rune-based store for setup wizard with reactive state management
  */
 

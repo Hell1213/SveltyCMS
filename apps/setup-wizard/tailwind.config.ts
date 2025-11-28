@@ -1,3 +1,8 @@
+/**
+ * @file apps/setup-wizard/tailwind.config.ts
+ * @description Tailwind configuration for setup wizard
+ */
+
 import { join } from 'path';
 import type { Config } from 'tailwindcss';
 

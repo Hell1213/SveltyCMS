@@ -1,5 +1,5 @@
 /**
- * @file src/stores/store.svelte.ts
+ * @file apps/setup-wizard/src/stores/store.svelte.ts
  * @description Global state management
  */
 

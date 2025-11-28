@@ -29,20 +29,20 @@
  */
 
 import { browser, building } from '$app/environment';
-import { publicEnv } from '@stores/globalSettings.svelte';
-import type { ISODateString } from '@src/content/types';
-import { dateToISODateString, isoDateStringToDate } from '@src/utils/dateUtils';
+import type { ISODateString } from '@sveltycms/shared-config/types';
+import { dateToISODateString, isoDateStringToDate } from './dateUtils';
 
 // This module should never run in browser - fail fast if it does
 if (browser) {
 	throw new Error('logger.server.ts cannot be imported in browser code. Use src/utils/logger.ts instead.');
 }
 
-// Helper to safely access publicEnv properties with a default value
-const getEnv = <T>(key: keyof typeof publicEnv, defaultValue: T): T => {
+// Helper to safely access env vars
+const getEnvVar = (key: string, defaultValue: any): any => {
 	try {
-		const value = publicEnv[key];
-		return value !== undefined ? (value as T) : defaultValue;
+		// @ts-ignore
+		const value = process.env[key];
+		return value !== undefined ? value : defaultValue;
 	} catch {
 		return defaultValue;
 	}
@@ -151,7 +151,7 @@ function updateMaxEnabledPriority() {
 		maxEnabledPriority = 0;
 		return;
 	}
-	const enabledLevels = getEnv('LOG_LEVELS', ['fatal', 'error', 'warn', 'info', 'debug', 'trace']);
+	const enabledLevels = getEnvVar('LOG_LEVELS', ['fatal', 'error', 'warn', 'info', 'debug', 'trace']);
 	// Ensure enabledLevels is an array before calling .includes
 	if (!Array.isArray(enabledLevels) || (Array.isArray(enabledLevels) && enabledLevels.includes('none'))) {
 		maxEnabledPriority = LOG_LEVEL_MAP.none.priority;
@@ -394,7 +394,7 @@ const serverFileOps = {
 	async checkAndRotateLogFile(): Promise<void> {
 		const { fsPromises, path, zlib, fs, stream } = await this._getModules();
 		const logFilePath = path.join(config.logDirectory, config.logFileName);
-		const logRotationSize = getEnv('LOG_ROTATION_SIZE', 5 * 1024 * 1024);
+		const logRotationSize = getEnvVar('LOG_ROTATION_SIZE', 5 * 1024 * 1024);
 
 		try {
 			const stats = await fsPromises.stat(logFilePath);
@@ -425,7 +425,7 @@ const serverFileOps = {
 
 	async cleanOldLogFiles(): Promise<void> {
 		const { fsPromises, path } = await this._getModules();
-		const logRetentionDays = getEnv('LOG_RETENTION_DAYS', 2);
+		const logRetentionDays = getEnvVar('LOG_RETENTION_DAYS', 2);
 		const files = await fsPromises.readdir(config.logDirectory);
 		const now = Date.now();
 		const cutoff = now - logRetentionDays * 24 * 60 * 60 * 1000;

@@ -1,5 +1,5 @@
 /**
- * @file src/stores/globalSettings.svelte.ts
+ * @file apps/setup-wizard/src/stores/globalSettings.svelte.ts
  * @description Global Settings Store for PUBLIC ONLY
  *
  * 🔒 SECURITY: This file only contains PUBLIC settings safe for client-side use.

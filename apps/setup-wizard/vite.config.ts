@@ -1,3 +1,8 @@
+/**
+ * @file apps/setup-wizard/vite.config.ts
+ * @description Vite configuration for setup wizard
+ */
+
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
@@ -11,7 +16,7 @@ export default defineConfig({
 		})
 	],
 	server: {
-		port: 5174,
+		port: 5173,
 		watch: {
 			usePolling: true,
 			interval: 1000,

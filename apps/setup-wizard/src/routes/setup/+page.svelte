@@ -1,5 +1,5 @@
 <!--
-@file src/routes/setup/+page.svelte
+@file apps/setup-wizard/src/routes/setup/+page.svelte
 @description Professional multi-step setup wizard for SveltyCMS with clean, modern design
 
 ### Features:
@@ -113,9 +113,6 @@
 		modalStore = getModalStore();
 		setGlobalToastStore(getToastStore());
 
-		console.log('onMount - modalStore:', modalStore);
-		console.log('onMount - modalComponentRegistry:', modalComponentRegistry);
-
 		// Load existing data from localStorage
 		loadStore();
 
@@ -128,22 +125,17 @@
 		// Using sessionStorage so it shows once per browser session
 		// If setup is already complete, don't show the modal
 		const welcomeShown = sessionStorage.getItem('sveltycms_welcome_modal_shown');
-		console.log('welcomeShown from sessionStorage:', welcomeShown);
 
 		// Show the welcome modal after component mounts
 		if (!welcomeShown) {
-			console.log('Welcome modal not shown this session, will trigger...');
 			// Use requestAnimationFrame to ensure DOM is fully ready
 			requestAnimationFrame(() => {
 				setTimeout(() => {
-					console.log('Triggering welcome modal NOW...');
 					showWelcomeModal();
 					// Set the flag so it doesn't show again this session
 					sessionStorage.setItem('sveltycms_welcome_modal_shown', 'true');
 				}, 100);
 			});
-		} else {
-			console.log('Welcome modal already shown this session, skipping...');
 		}
 	});
 
@@ -154,25 +146,16 @@
 	});
 
 	function showWelcomeModal() {
-		if (!modalStore) {
-			console.warn('modalStore not initialized yet');
-			return;
-		}
-		console.log('showWelcomeModal called, modalStore:', modalStore);
+		if (!modalStore) return;
+
 		const modal: ModalSettings = {
 			type: 'component',
 			component: 'welcomeModal',
 			response: (confirmed: boolean) => {
-				if (confirmed) {
-					console.log('User clicked Get Started in welcome modal.');
-				} else {
-					console.log('User closed welcome modal without starting.');
-				}
+				// Handle response if needed
 			}
 		};
-		console.log('Triggering modal with settings:', modal);
 		modalStore.trigger(modal);
-		console.log('Modal trigger called');
 	}
 
 	// --- 5. DERIVED STATE ---
@@ -688,7 +671,6 @@
 
 <div class="bg-surface-50-900 min-h-screen w-full transition-colors">
 	<!-- Modal with component registry for this page -->
-	<Modal components={modalComponentRegistry} />
 	<Toast />
 	<div class="px-4 py-6 sm:px-6 lg:px-8 lg:py-8 mx-auto max-w-[1600px]">
 		<!-- Header -->
